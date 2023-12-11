@@ -1,0 +1,97 @@
+---
+title: "MyFirstRmd"
+author: "R. Kidby"
+date: "October 12, 2023"
+output:
+  pdf_document: default
+  html_document: default
+---
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+```{r import_data, message=FALSE, echo=FALSE}
+ 
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+nypd_shooting <- read_csv(url_in)
+  
+```
+##Tidying Data
+There wasn't much to tidy, only a few missing jurisdition codes and 10 lat and long. I had to convert OCCUR_DATE and OCCUR_TIME to date and time respectively. 
+
+```{r seperate_data, echo=FALSE}
+vic_descrip <- select(nypd_shooting, INCIDENT_KEY,VIC_SEX, VIC_RACE, VIC_AGE_GROUP )
+ 
+perp_descrip <- select(nypd_shooting, INCIDENT_KEY, PERP_AGE_GROUP, PERP_SEX, PERP_RACE )
+ 
+shooting_coord <- select(nypd_shooting,INCIDENT_KEY, X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat)
+ 
+shooting_time <- select(nypd_shooting, INCIDENT_KEY, OCCUR_DATE, OCCUR_TIME, BORO, PERP_RACE) %>%
+  mutate(OCCUR_DATETIME = as.POSIXct(paste(OCCUR_DATE, OCCUR_TIME), format="%m/%d/%Y %H:%M")) %>%
+  mutate(OCCUR_DATE = as.Date(OCCUR_DATE, format = "%m/%d/%Y"))
+ 
+head(vic_descrip)
+head(perp_descrip)
+head(shooting_coord)
+head(shooting_time)
+summary(nypd_shooting)
+ 
+```
+ 
+## Trending Plots
+ 
+Shooting Time vs Shooting Date, showing there is a common gap in shooting between the hours of 6am and noon.
+ 
+```{r Date_Time, echo=FALSE}
+plot_datetime <- ggplot(shooting_time, aes(x = OCCUR_DATE, y = OCCUR_TIME))+
+  geom_point() +
+  labs(title = "Shooting Time vs Date", x = "Date", y = "Time")
+print(plot_datetime)
+```
+
+ 
+ 
+Shooting Count vs Victim Race
+ 
+```{r race_vic, echo=FALSE}
+plot_race_boro <- ggplot(nypd_shooting, aes(x = VIC_RACE)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title = "Count of Each Item", x = "Victim Race", y = "Count")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(plot_race_boro)
+```
+
+Shooting Count vs Perp Race
+ 
+```{r race_perp, echo=FALSE}
+plot_race_perp <- ggplot(nypd_shooting, aes(x = PERP_RACE)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title = "Count of Each Item", x = "Perp Race", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(plot_race_perp)
+```
+
+Shooting Count vs Boro. Indicates that there seems to be more shootings in the Bronx and Brooklyn. 
+ 
+```{r boro_count, echo=FALSE}
+plot_boro_count <- ggplot(nypd_shooting, aes(x = BORO)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title = "Count of Each Item", x = "BORO", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(plot_boro_count)
+```
+
+
+##Conclusion
+
+Based off the data is does seem that shootings tend to occur the most in the boros of the Bronx and Brooklyn. These event happen between the hours of noon and 6 am. The race of the shooter and vicitim both tend to be Black, Black Hispanic, and White Hispanic. This would indicate that the overall population of Bronx and Brooklyn are mainly Black, Black Hispanic, and White Hispanic. 
+
+
+##Bias
+There could be a lot bias in the perp race, there seems to be a large portion of shooting incidents where the perp's race was filled in as N/A. the race trending could be wildly different based off the large amount of missing data, which may scew results when comparing to the overall population data of the area. 
